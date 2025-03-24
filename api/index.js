@@ -16,24 +16,24 @@ app.use(express.json());
 
 
 
-app.get('/', (req, res) => {
-  res.json({ message: 'API is running!' });
-});
-
-// // Connect to MongoDB
-// mongoose.connect(process.env.MONGODB_URI, {
-//   useNewUrlParser: true,
-//   useUnifiedTopology: true,
+// app.get('/', (req, res) => {
+//   res.json({ message: 'API is running!' });
 // });
 
+// Connect to MongoDB
+mongoose.connect(process.env.MONGODB_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+});
 
 
 
-// // Import routes
-// const searchStoresRouter = require('./searchStores');
 
-// // Use routes
-// app.use('/api/search-stores', searchStoresRouter);
+// Import routes
+const searchStoresRouter = require('./searchStores');
+
+// Use routes
+app.use('/api/search-stores', searchStoresRouter);
 
 // // Basic route
 // app.get('/api', (req, res) => {

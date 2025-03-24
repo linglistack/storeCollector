@@ -29,11 +29,11 @@ app.get('/', (req, res) => {
 
 
 
-// // Import routes
-// const searchStoresRouter = require('./searchStores');
+// Import routes
+const searchStoresRouter = require('./searchStores');
 
-// Use routes
-// app.use('/api/search-stores', searchStoresRouter);
+Use routes
+app.use('/api/search-stores', searchStoresRouter);
 
 // Basic route
 // app.get('/api', (req, res) => {

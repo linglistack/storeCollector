@@ -29,45 +29,45 @@ mongoose.connect(process.env.MONGODB_URI, {
 
 
 
-// Import routes
-const searchStoresRouter = require('./searchStores');
+// // Import routes
+// const searchStoresRouter = require('./searchStores');
 
 // Use routes
 app.use('/api/search-stores', searchStoresRouter);
 
-// // Basic route
-// app.get('/api', (req, res) => {
-//   res.json({ message: 'Welcome to the MERN API' });
-// });
+// Basic route
+app.get('/api', (req, res) => {
+  res.json({ message: 'Welcome to the MERN API' });
+});
 
-// // Add this after your existing basic route
-// app.post('/api/zipcodes', async (req, res) => {
-//   try {
-//     const { zipcode } = req.body;
-//     const newZipcode = new Zipcode({ zipcode });
-//     await newZipcode.save();
-//     res.status(201).json(newZipcode);
-//   } catch (error) {
-//     res.status(400).json({ message: error.message });
-//   }
-// });
+// Add this after your existing basic route
+app.post('/api/zipcodes', async (req, res) => {
+  try {
+    const { zipcode } = req.body;
+    const newZipcode = new Zipcode({ zipcode });
+    await newZipcode.save();
+    res.status(201).json(newZipcode);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
 
-// // Get all zipcodes
-// app.get('/api/zipcodes', async (req, res) => {
-//   try {
-//     const zipcodes = await Zipcode.find().sort({ createdAt: -1 });
-//     res.json(zipcodes);
-//   } catch (error) {
-//     res.status(500).json({ message: error.message });
-//   }
-// });
+// Get all zipcodes
+app.get('/api/zipcodes', async (req, res) => {
+  try {
+    const zipcodes = await Zipcode.find().sort({ createdAt: -1 });
+    res.json(zipcodes);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
-// // For local development
-// if (process.env.NODE_ENV !== 'production') {
-//   app.listen(5000, () => {
-//     console.log('Server is running on port 5000');
-//   });
-// }
+// For local development
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(5000, () => {
+    console.log('Server is running on port 5000');
+  });
+}
 
 // For Vercel serverless deployment
 module.exports = app; 

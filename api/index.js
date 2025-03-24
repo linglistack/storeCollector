@@ -32,7 +32,7 @@ app.get('/', (req, res) => {
 // Import routes
 const searchStoresRouter = require('./searchStores');
 
-Use routes
+// Use routes
 app.use('/api/search-stores', searchStoresRouter);
 
 // Basic route

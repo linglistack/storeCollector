@@ -33,7 +33,7 @@ mongoose.connect(process.env.MONGODB_URI, {
 // const searchStoresRouter = require('./searchStores');
 
 // Use routes
-app.use('/api/search-stores', searchStoresRouter);
+// app.use('/api/search-stores', searchStoresRouter);
 
 // Basic route
 app.get('/api', (req, res) => {

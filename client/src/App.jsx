@@ -10,6 +10,8 @@ const api = axios.create({
   baseURL: process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:5000/api'
 });
 
+const API_URL = process.env.REACT_APP_API_URL;
+
 function App() {
   const [searchResults, setSearchResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -49,7 +51,7 @@ function App() {
     
     try {
       // Pass the structured data directly
-      const response = await axios.post('/api/search-stores', {
+      const response = await axios.post(`${API_URL}/search-stores`, {
         product: searchParams.product,
         retailStore: searchParams.retailStore,
         zipCode: searchParams.zipCode,
@@ -99,7 +101,7 @@ function App() {
     const nextPage = page + 1;
     
     try {
-      const response = await axios.post('/api/search-stores', {
+      const response = await axios.post(`${API_URL}/search-stores`, {
         product: lastSearchParams.product,
         retailStore: lastSearchParams.retailStore,
         zipCode: lastSearchParams.zipCode,

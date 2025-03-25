@@ -10,7 +10,7 @@ const api = axios.create({
   baseURL: process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:5000/api'
 });
 
-const API_URL = process.env.NODE_ENV === 'production' ? '/api' :'https://store-collector-api.vercel.app/api'
+const API_URL = process.env.NODE_ENV === 'production' ? 'https://store-collector-api.vercel.app/api' : 'api'
 
 function App() {
   const [searchResults, setSearchResults] = useState([]);

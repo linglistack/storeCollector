@@ -11,9 +11,43 @@ function ExportButton({ results }) {
       
       // Add data rows
       results.forEach(store => {
+        // Format the address to include city, state, and country
+        let fullAddress = store.address || '';
+        
+        // If the address doesn't already include the city/state/country info, add it
+        if (store.city || store.state || store.country) {
+          // Only add comma if the address isn't empty and doesn't already end with a comma
+          if (fullAddress && !fullAddress.trim().endsWith(',')) {
+            fullAddress += ', ';
+          }
+          
+          // Add city if available
+          if (store.city) {
+            fullAddress += store.city;
+            // Add comma if state or country follows
+            if (store.state || store.country) {
+              fullAddress += ', ';
+            }
+          }
+          
+          // Add state if available
+          if (store.state) {
+            fullAddress += store.state;
+            // Add comma if country follows
+            if (store.country) {
+              fullAddress += ', ';
+            }
+          }
+          
+          // Add country if available
+          if (store.country) {
+            fullAddress += store.country;
+          }
+        }
+        
         csvRows.push([
           store.name,
-          store.address,
+          fullAddress, // Use the combined address field
           store.phone,
           store.email,
           store.website || 'N/A',
@@ -22,7 +56,15 @@ function ExportButton({ results }) {
       });
       
       // Convert to CSV string
-      const csvContent = csvRows.map(row => row.join(',')).join('\n');
+      const csvContent = csvRows.map(row => 
+        row.map(cell => {
+          // Properly escape fields containing commas, quotes, or newlines
+          if (cell && (cell.includes(',') || cell.includes('"') || cell.includes('\n'))) {
+            return `"${cell.replace(/"/g, '""')}"`;
+          }
+          return cell;
+        }).join(',')
+      ).join('\n');
       
       // Create a Blob and download link
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });

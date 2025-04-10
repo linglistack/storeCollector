@@ -8,8 +8,21 @@ function ResultsTable({
   loadingMore, 
   onLoadMore, 
   onSelectStore,
-  selectedStore
+  selectedStore,
+  currentDistanceRange
 }) {
+  // Calculate current distance range text
+  const getDistanceRangeText = () => {
+    const baseRadius = 5; // 5km base radius
+    if (currentDistanceRange === 1) {
+      return `0-${baseRadius}km`;
+    } else {
+      const minDistance = (currentDistanceRange - 1) * baseRadius;
+      const maxDistance = currentDistanceRange * baseRadius;
+      return `${minDistance}-${maxDistance}km`;
+    }
+  };
+
   if (isEmpty) {
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-8 text-center">
@@ -34,7 +47,14 @@ function ResultsTable({
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 border-b border-gray-200 bg-gray-50/50 p-3 sm:p-4 md:px-6">
           <div>
             <h2 className="text-base sm:text-lg font-medium text-gray-900">Matching Retail Stores</h2>
-            <p className="text-xs sm:text-sm text-gray-500">Found {results.length} stores sorted by distance</p>
+            <p className="text-xs sm:text-sm text-gray-500">
+              Found {results.length} stores sorted by distance
+              {currentDistanceRange && (
+                <span className="ml-1 text-xs text-blue-600 font-medium">
+                  (searching {getDistanceRangeText()})
+                </span>
+              )}
+            </p>
           </div>
           
           <div className="flex-shrink-0">

@@ -25,6 +25,8 @@ function App() {
   const [category, setCategory] = useState('');
   const [selectedStore, setSelectedStore] = useState(null);
   const [centerLocation, setCenterLocation] = useState(null);
+  const [searchStrategy, setSearchStrategy] = useState('primary');
+  const [currentDistanceRange, setCurrentDistanceRange] = useState(1);
 
   const fetchZipcodes = async () => {
     try {
@@ -48,6 +50,8 @@ function App() {
     setSeenIds([]);
     setCategory('');
     setSelectedStore(null);
+    setSearchStrategy('primary');
+    setCurrentDistanceRange(1); // Reset to first distance range
     
     try {
       // Pass the structured data directly
@@ -56,8 +60,22 @@ function App() {
         retailStore: searchParams.retailStore,
         zipCode: searchParams.zipCode,
         page: 1,
-        radius: 10000 // 10km initial radius
+        baseRadius: 5000, // 5km base radius
+        searchStrategy: 'primary', // Always start with primary strategy
+        currentDistanceRange: 1 // Start with first distance range
       });
+      
+      // Log debugging information
+      if (response.data.debug) {
+        console.log('===== INITIAL SEARCH DEBUG =====');
+        console.log(`Strategy: ${response.data.debug.strategy}, Range: ${response.data.debug.range}`);
+        console.log(`Places found: ${response.data.debug.placesFound}, New places: ${response.data.debug.newPlaces}`);
+        console.log(`After distance filter: ${response.data.debug.afterDistanceFilter}`);
+        console.log(`NextPageToken: ${response.data.debug.hasNextPageToken}`);
+        console.log(`Unique stores: ${response.data.debug.uniqueStoresCount}`);
+        console.log(`Has more: ${response.data.hasMore}`);
+        console.log('================================');
+      }
       
       // Store the next page token for later use
       setNextPageToken(response.data.nextPageToken);
@@ -67,11 +85,13 @@ function App() {
       setSeenIds(response.data.seenIds || []);
       setCategory(response.data.category || '');
       setCenterLocation(response.data.location);
+      setSearchStrategy(response.data.searchStrategy || 'primary');
+      setCurrentDistanceRange(response.data.currentDistanceRange || 1);
       
       // Format the results
       const formattedResults = response.data.results;
       setSearchResults(formattedResults);
-      setHasMore(!!response.data.nextPageToken);
+      setHasMore(!!response.data.hasMore || !!response.data.nextPageToken);
       
       // Select the first store if available
       if (formattedResults.length > 0) {
@@ -100,38 +120,107 @@ function App() {
     setLoadingMore(true);
     const nextPage = page + 1;
     
-    try {
-      const response = await axios.post(`${API_URL}/search-stores`, {
-        product: lastSearchParams.product,
-        retailStore: lastSearchParams.retailStore,
-        zipCode: lastSearchParams.zipCode,
-        page: nextPage,
-        nextPageToken: nextPageToken,
-        radius: 10000 * Math.ceil(nextPage / 2), // Increase radius for later pages
-        seenIds: seenIds,
-        category: category // Pass the category determined earlier
-      });
-      
-      // Update state with new data
-      setNextPageToken(response.data.nextPageToken);
-      setSeenIds(response.data.seenIds || []);
-      
-      // Add the new results to existing ones
-      const newResults = response.data.results;
-      setSearchResults(prev => [...prev, ...newResults]);
-      setPage(nextPage);
-      setHasMore(!!response.data.nextPageToken);
-    } catch (error) {
-      console.error('Error loading more results:', error);
-      let errorMessage = 'Failed to load more results';
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
+    // Set a flag to track whether we've successfully found new results
+    let foundNewResults = false;
+    // Set a maximum number of automatic retries to avoid infinite loops
+    let maxRetries = 3;
+    let retryCount = 0;
+    
+    // Keep trying until we find new results or hit retry limit
+    while (!foundNewResults && retryCount < maxRetries) {
+      try {
+        console.log(`Attempt ${retryCount + 1} to load more stores (page ${nextPage})`);
+        
+        const response = await axios.post(`${API_URL}/search-stores`, {
+          product: lastSearchParams.product,
+          retailStore: lastSearchParams.retailStore,
+          zipCode: lastSearchParams.zipCode,
+          page: nextPage,
+          nextPageToken: nextPageToken,
+          baseRadius: 5000, // 5km base radius
+          seenIds: seenIds,
+          category: category,
+          searchStrategy: nextPageToken ? 'primary' : searchStrategy,
+          currentDistanceRange: currentDistanceRange // Pass the current distance range
+        });
+        
+        // Log debugging information
+        if (response.data.debug) {
+          console.log('===== SEARCH DEBUG (CLIENT) =====');
+          console.log(`Strategy: ${response.data.debug.strategy}, Range: ${response.data.debug.range}`);
+          console.log(`Places found: ${response.data.debug.placesFound}, New places: ${response.data.debug.newPlaces}`);
+          console.log(`After distance filter: ${response.data.debug.afterDistanceFilter}`);
+          console.log(`NextPageToken: ${response.data.debug.hasNextPageToken}`);
+          console.log(`Unique stores: ${response.data.debug.uniqueStoresCount}`);
+          console.log(`Has more: ${response.data.hasMore}`);
+          console.log('================================');
+        }
+        
+        // Update state with new data
+        setNextPageToken(response.data.nextPageToken);
+        setSeenIds(response.data.seenIds || []);
+        setSearchStrategy(response.data.searchStrategy || 'primary');
+        setCurrentDistanceRange(response.data.currentDistanceRange || currentDistanceRange);
+        
+        // Add the new results to existing ones
+        const newResults = response.data.results;
+        
+        // If we got new results, mark as successful and exit the retry loop
+        if (newResults.length > 0) {
+          console.log(`Found ${newResults.length} new stores`);
+          foundNewResults = true;
+          
+          setSearchResults(prev => {
+            // Combine and sort by distance
+            const combined = [...prev, ...newResults];
+            return combined.sort((a, b) => a.distance - b.distance);
+          });
+          
+          setPage(nextPage);
+          setHasMore(!!response.data.hasMore);
+          break; // Exit the retry loop
+        }
+        
+        // If no new results but switching strategy/range, update state and try again
+        if (newResults.length === 0 && response.data.hasMore) {
+          console.log('No new results in current request, but more may be available');
+          // Update strategy and range for next attempt
+          setSearchStrategy(response.data.searchStrategy);
+          setCurrentDistanceRange(response.data.currentDistanceRange);
+          
+          retryCount++;
+          
+          // Give the server a moment before retrying
+          if (retryCount < maxRetries) {
+            console.log(`Waiting before retry attempt ${retryCount + 1}`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        } else {
+          // If we have no new results and no more to fetch, exit the loop
+          console.log('No more stores to fetch');
+          setHasMore(false);
+          break;
+        }
+      } catch (error) {
+        console.error('Error loading more results:', error);
+        let errorMessage = 'Failed to load more results';
+        if (error.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        }
+        alert(`Error: ${errorMessage}`);
+        setHasMore(false);
+        break; // Exit the retry loop on error
       }
-      alert(`Error: ${errorMessage}`);
-      setHasMore(false);
-    } finally {
-      setLoadingMore(false);
     }
+    
+    // After all retries, if we still haven't found new results but the server says there are more,
+    // increment the page number and update the UI to prepare for the next attempt
+    if (!foundNewResults && hasMore) {
+      console.log('Continuing search on next user action');
+      setPage(nextPage);
+    }
+    
+    setLoadingMore(false);
   };
   
   const handleStoreSelect = (store) => {
@@ -173,6 +262,7 @@ function App() {
                 onLoadMore={handleLoadMore}
                 onSelectStore={handleStoreSelect}
                 selectedStore={selectedStore}
+                currentDistanceRange={currentDistanceRange}
               />
               
               {category && (
